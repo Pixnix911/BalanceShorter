@@ -1,0 +1,89 @@
+// ==UserScript==
+// @name         сокращение балика
+// @namespace    http://tampermonkey.net/
+// @version      1.1
+// @description  Преобразует числа в балансе в сокращённый вид: 21 000 → 21k, 1 500 000 → 1.5M и т.д
+// @author       fluouliss
+// @match        https://www.pekora.zip/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    function formatCompactNumber(num) {
+        if (num < 1000) return num.toString();
+        if (num < 1_000_000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+        if (num < 1_000_000_000) return (num / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+        return (num / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+    }
+
+
+    function processTextNode(node) {
+        if (node.nodeType !== Node.TEXT_NODE) return;
+        let parent = node.parentElement;
+        if (!parent) return;
+
+        let original = node.textContent;
+        let match = original.match(/([\d\s\u00A0,]+(?:\.\d+)?)/);
+        if (!match) return;
+        let numStr = match[1].replace(/[\s\u00A0,]/g, '');
+        let num = parseFloat(numStr);
+        if (isNaN(num) || num < 1000) return;
+        let short = formatCompactNumber(num);
+        let newText = original.replace(match[1], short);
+        if (newText !== original) {
+            node.textContent = newText;
+        }
+    }
+
+    function walkTextNodes(root) {
+        const walker = document.createTreeWalker(
+            root,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function(node) {
+                    if (node.parentElement && (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }
+        );
+        let node;
+        while (node = walker.nextNode()) {
+            processTextNode(node);
+        }
+    }
+
+    function processPage() {
+        let balanceSelectors = [
+            '[class*="balance"]',
+            '[class*="robux"]',
+            '[class*="tix"]',
+            '[class*="currency"]',
+            '[data-robux]',
+            '[data-balance]',
+            '.header-robux-amount',
+            '.profile-robux',
+            '.nav-currency',
+            '.currency-amount',
+            '.rbx-amount',
+            '.icon-robux'
+        ];
+        let candidates = document.querySelectorAll(balanceSelectors.join(','));
+        if (candidates.length) {
+            candidates.forEach(el => walkTextNodes(el));
+        } else {
+            walkTextNodes(document.body);
+        }
+    }
+
+    const observer = new MutationObserver(() => {
+        processPage();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    window.addEventListener('load', processPage);
+    processPage();
+})();
