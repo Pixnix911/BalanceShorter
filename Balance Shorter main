@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         сокращение балика
+// @name         BalanceShorter
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Преобразует числа в балансе в сокращённый вид: 21 000 → 21k, 1 500 000 → 1.5M и т.д
+// @version      1.0
+// @description  21 000 → 21k, 1 500 000 → 1.5M 
 // @author       fluouliss
-// @match        https://www.pekora.zip/*
+// @match        https://froot.club/*
 // @grant        none
 // ==/UserScript==
 
